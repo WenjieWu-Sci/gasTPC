@@ -1,0 +1,19 @@
+# run_gdml.mac  –  Run with geometry loaded from GDML file
+#
+# The geometry_mode must be set to "gdml" in config/detector.json
+# (or edit the config before launching the simulation).
+#
+# Usage (batch):  ./gasTPC macros/run_gdml.mac
+
+/run/verbose  1
+/event/verbose 0
+/tracking/verbose 0
+
+# ---- Particle gun -------------------------------------------------------
+/gun/particle    e-
+/gun/energy      1 MeV
+/gun/position    0 0 -5 cm
+/gun/direction   0 0 1
+
+# ---- Start run ----------------------------------------------------------
+/run/beamOn 10

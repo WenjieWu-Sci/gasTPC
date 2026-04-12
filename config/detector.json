@@ -1,0 +1,18 @@
+{
+    "geometry_mode": "builtin",
+    "gdml_file": "gdml/simple_tpc.gdml",
+    "gas": "Xe",
+    "tpc_radius_cm": 10.0,
+    "tpc_length_cm": 20.0,
+    "anode_thickness_cm": 0.1,
+    "cathode_thickness_cm": 0.1,
+    "output_file": "output",
+    "particle": "gamma",
+    "energy_keV": 662.0,
+    "gun_pos_x_cm": 0.0,
+    "gun_pos_y_cm": 0.0,
+    "gun_pos_z_cm": 0.0,
+    "gun_dir_x": 0.0,
+    "gun_dir_y": 0.0,
+    "gun_dir_z": 1.0
+}

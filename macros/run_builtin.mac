@@ -1,0 +1,16 @@
+# run_builtin.mac  –  Run the built-in cylindrical TPC geometry
+#
+# Usage (batch):  ./gasTPC macros/run_builtin.mac
+
+/run/verbose  1
+/event/verbose 0
+/tracking/verbose 0
+
+# ---- Particle gun -------------------------------------------------------
+/gun/particle    gamma
+/gun/energy      662 keV
+/gun/position    0 0 0 cm
+/gun/direction   0 0 1
+
+# ---- Start run ----------------------------------------------------------
+/run/beamOn 100
