@@ -1,0 +1,9 @@
+{
+    "gas_name": "Xe",
+    "w_value_eV": 21.9,
+    "fano_factor": 0.17,
+    "attachment_coeff_per_cm": 0.0,
+    "drift_velocity_cm_per_us": 2.0,
+    "diffusion_transverse_cm_sqrt_cm": 0.013,
+    "diffusion_longitudinal_cm_sqrt_cm": 0.012
+}

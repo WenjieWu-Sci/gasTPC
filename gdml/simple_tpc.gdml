@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!--
+  simple_tpc.gdml
+  A minimal cylindrical gas TPC for use with the gasTPC simulation.
+
+  Geometry (all units cm):
+    World  : 400 × 400 × 400 cm box filled with Air
+    Cathode: copper disk  R=10 cm, thickness=0.1 cm, centre z=−9.95 cm
+    Drift  : Xe gas tube  R=10 cm, full length=19.8 cm, centre z=0
+    Anode  : copper disk  R=10 cm, thickness=0.1 cm, centre z=+9.95 cm
+
+  Note on GDML solid dimensions:
+    <box>  x,y,z are FULL extents (Geant4 halves them internally)
+    <tube> z      is FULL z-length  (Geant4 halves it internally)
+-->
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+
+  <!-- ================================================================== -->
+  <define/>
+
+  <!-- ================================================================== -->
+  <materials>
+
+    <!-- Elements -->
+    <element name="Xe_el"  formula="Xe" Z="54"> <atom value="131.293"/> </element>
+    <element name="Cu_el"  formula="Cu" Z="29"> <atom value="63.546"/>  </element>
+    <element name="N_el"   formula="N"  Z="7">  <atom value="14.007"/>  </element>
+    <element name="O_el"   formula="O"  Z="8">  <atom value="15.999"/>  </element>
+
+    <!-- Xenon gas at STP  (density 5.458 mg/cm³) -->
+    <material name="XenonGas" state="gas">
+      <D value="5.458e-3" unit="g/cm3"/>
+      <T value="293.15"   unit="K"/>
+      <P value="101325"   unit="pascal"/>
+      <fraction n="1.0" ref="Xe_el"/>
+    </material>
+
+    <!-- Copper (electrode material) -->
+    <material name="Copper" state="solid">
+      <D value="8.96" unit="g/cm3"/>
+      <fraction n="1.0" ref="Cu_el"/>
+    </material>
+
+    <!-- Dry air (approximate composition by mass) -->
+    <material name="Air" state="gas">
+      <D value="1.205e-3" unit="g/cm3"/>
+      <fraction n="0.755" ref="N_el"/>
+      <fraction n="0.245" ref="O_el"/>
+    </material>
+
+  </materials>
+
+  <!-- ================================================================== -->
+  <solids>
+    <!-- World box: full 400×400×400 cm  (halfX/Y/Z = 200 cm each) -->
+    <box  name="WorldSolid"
+          x="400" y="400" z="400"
+          lunit="cm"/>
+
+    <!-- TPC drift region: R=10 cm, full z-length = 19.8 cm (halfZ = 9.9 cm) -->
+    <tube name="DriftSolid"
+          rmin="0" rmax="10" z="19.8"
+          startphi="0" deltaphi="360"
+          aunit="deg" lunit="cm"/>
+
+    <!-- Electrode disk: R=10 cm, full z-length = 0.1 cm (halfZ = 0.05 cm) -->
+    <tube name="ElectrodeSolid"
+          rmin="0" rmax="10" z="0.1"
+          startphi="0" deltaphi="360"
+          aunit="deg" lunit="cm"/>
+  </solids>
+
+  <!-- ================================================================== -->
+  <structure>
+
+    <!-- Cathode logical volume -->
+    <volume name="CathodeVol">
+      <materialref ref="Copper"/>
+      <solidref    ref="ElectrodeSolid"/>
+    </volume>
+
+    <!-- Anode logical volume -->
+    <volume name="AnodeVol">
+      <materialref ref="Copper"/>
+      <solidref    ref="ElectrodeSolid"/>
+    </volume>
+
+    <!-- DriftRegion logical volume – the active gas sensitive volume -->
+    <volume name="DriftRegion">
+      <materialref ref="XenonGas"/>
+      <solidref    ref="DriftSolid"/>
+    </volume>
+
+    <!-- World -->
+    <volume name="WorldLV">
+      <materialref ref="Air"/>
+      <solidref    ref="WorldSolid"/>
+
+      <!-- Cathode at z = −9.95 cm  (spans −10 → −9.9 cm) -->
+      <physvol name="CathodePV">
+        <volumeref ref="CathodeVol"/>
+        <position name="cathode_pos" unit="cm" x="0" y="0" z="-9.95"/>
+      </physvol>
+
+      <!-- Drift region centred at z = 0  (spans −9.9 → +9.9 cm) -->
+      <physvol name="DriftRegionPV">
+        <volumeref ref="DriftRegion"/>
+        <position name="drift_pos"   unit="cm" x="0" y="0" z="0"/>
+      </physvol>
+
+      <!-- Anode at z = +9.95 cm  (spans +9.9 → +10 cm) -->
+      <physvol name="AnodePV">
+        <volumeref ref="AnodeVol"/>
+        <position name="anode_pos"   unit="cm" x="0" y="0" z="9.95"/>
+      </physvol>
+
+    </volume>
+  </structure>
+
+  <!-- ================================================================== -->
+  <setup name="Default" version="1.0">
+    <world ref="WorldLV"/>
+  </setup>
+
+</gdml>
