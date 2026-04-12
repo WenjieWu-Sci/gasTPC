@@ -95,7 +95,6 @@ void RunAction::EndOfRunAction(const G4Run* run) {
     G4cout << "[RunAction] Events: "    << nev
            << " | Total hits: "         << fTotalHits
            << " | Total electrons: "    << fTotalElectrons << G4endl;
-    (void)nev;
 #endif
 }
 

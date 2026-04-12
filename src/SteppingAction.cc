@@ -22,10 +22,10 @@ SteppingAction::SteppingAction(EventAction* eventAction,
       fDriftVolumeName("DriftRegion")
 {
     // Cathode face z-position (Geant4 mm units) for drift-distance calculation.
-    // Cathode sits at –halfTPCLength + cathodeThickness/2; approximate as –halfTPCLength.
+    // Cathode centre at –halfTPCLength + cathodeThickness/2.
     const double tpcLen_cm     = ConfigManager::Instance().GetDouble("tpc_length_cm", 20.0);
     const double cathThick_cm  = ConfigManager::Instance().GetDouble("cathode_thickness_cm", 0.1);
-    fCathodeZ_mm = -(tpcLen_cm / 2.0 - cathThick_cm / 2.0) * 10.0; // cm → mm
+    fCathodeZ_mm = (-(tpcLen_cm / 2.0) + cathThick_cm / 2.0) * 10.0; // cm → mm
 }
 
 void SteppingAction::UserSteppingAction(const G4Step* step) {
