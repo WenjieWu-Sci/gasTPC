@@ -21,11 +21,11 @@ SteppingAction::SteppingAction(EventAction* eventAction,
       fModel(model),
       fDriftVolumeName("DriftRegion")
 {
-    // Cathode face z-position (Geant4 mm units) for drift-distance calculation.
+    // Cathode face z-position (Geant4 internal units) for drift-distance calculation.
     // Cathode centre at –halfTPCLength + cathodeThickness/2.
     const double tpcLen_cm     = ConfigManager::Instance().GetDouble("tpc_length_cm", 20.0);
     const double cathThick_cm  = ConfigManager::Instance().GetDouble("cathode_thickness_cm", 0.1);
-    fCathodeZ_mm = (-(tpcLen_cm / 2.0) + cathThick_cm / 2.0) * 10.0; // cm → mm
+    fCathodeZ_mm = (-(tpcLen_cm / 2.0) + cathThick_cm / 2.0) * cm; // cm → Geant4 internal units
 }
 
 void SteppingAction::UserSteppingAction(const G4Step* step) {
@@ -47,9 +47,9 @@ void SteppingAction::UserSteppingAction(const G4Step* step) {
     const G4double      time = step->GetPreStepPoint()->GetGlobalTime();
     const G4Track*      trk  = step->GetTrack();
 
-    // Drift distance from the cathode face (mm → cm)
+    // Drift distance from the cathode face (Geant4 mm → cm)
     const double driftDist_cm =
-        std::max(0.0, (pos.z() - fCathodeZ_mm) / 10.0); // mm to cm
+        std::max(0.0, (pos.z() - fCathodeZ_mm) / cm);
 
     // ---- Ionisation ------------------------------------------------------
     const double edep_eV  = edep / eV;

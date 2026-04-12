@@ -80,7 +80,10 @@ void RunAction::EndOfRunAction(const G4Run* run) {
 #else
     // Write CSV summary
     std::ofstream csv(fTextFile);
-    if (csv.is_open()) {
+    if (!csv.is_open()) {
+        G4cerr << "[RunAction] ERROR: cannot open text summary file '"
+               << fTextFile << "'\n";
+    } else {
         csv << "# Gas TPC simulation summary\n";
         csv << "# Events," << fNEvents << "\n";
         csv << "# TotalHits," << fTotalHits << "\n";

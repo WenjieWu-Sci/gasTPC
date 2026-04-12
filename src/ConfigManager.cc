@@ -26,6 +26,8 @@ static std::string stripQuotes(const std::string& s) {
 // ---- public API ----------------------------------------------------------
 
 ConfigManager& ConfigManager::Instance() {
+    // Thread-safe in C++11 and later: local static initialization is guaranteed
+    // to occur exactly once even in the presence of concurrent calls (C++11 §6.7).
     static ConfigManager instance;
     return instance;
 }

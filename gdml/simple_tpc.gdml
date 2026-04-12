@@ -4,10 +4,10 @@
   A minimal cylindrical gas TPC for use with the gasTPC simulation.
 
   Geometry (all units cm):
-    World  : 400 × 400 × 400 cm box filled with Air
-    Cathode: copper disk  R=10 cm, thickness=0.1 cm, centre z=−9.95 cm
-    Drift  : Xe gas tube  R=10 cm, full length=19.8 cm, centre z=0
-    Anode  : copper disk  R=10 cm, thickness=0.1 cm, centre z=+9.95 cm
+    World  : 400 x 400 x 400 cm box filled with Air
+    Cathode: copper disk  R=10 cm, thickness=0.1 cm, center z=-9.95 cm
+    Drift  : Xe gas tube  R=10 cm, full length=19.8 cm, center z=0
+    Anode  : copper disk  R=10 cm, thickness=0.1 cm, center z=+9.95 cm
 
   Note on GDML solid dimensions:
     <box>  x,y,z are FULL extents (Geant4 halves them internally)

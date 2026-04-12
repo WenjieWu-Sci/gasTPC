@@ -89,7 +89,7 @@ Edit `config/detector.json` before building or running:
 
 ## Gas Parameters
 
-| Gas  | W-value (eV) | Fano | Attachment (cm⁻¹) | v\_drift (cm/µs) |
+| Gas  | W-value (eV) | Fano | Attachment (cm⁻¹) | v_drift (cm/µs) |
 |------|-------------|------|-------------------|-----------------|
 | Xe   | 21.9        | 0.17 | 0.00              | 2.0             |
 | SF6  | 34.0        | 0.57 | 0.05              | 0.1             |
