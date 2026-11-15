@@ -15,7 +15,12 @@
 #include "G4GDMLParser.hh"
 #include "G4LogicalVolume.hh"
 #include "G4LogicalVolumeStore.hh"
-#include "G4MagInt_Driver.hh"
+#include "G4Version.hh"
+#if G4VERSION_NUMBER >= 1140
+  #include "G4IntegrationDriver.hh"
+#else
+  #include "G4MagInt_Driver.hh"
+#endif
 #include "G4Material.hh"
 #include "G4NistManager.hh"
 #include "G4PVPlacement.hh"
@@ -35,6 +40,7 @@ DetectorConstruction::DetectorConstruction() {
     fMode             = cfg.GetString("geometry_mode", "builtin");
     fGDMLFile         = cfg.GetString("gdml_file",     "gdml/simple_tpc.gdml");
     fGasName          = cfg.GetString("gas",            "Xe");
+    fGasPressure_bar  = cfg.GetDouble("gas_pressure_bar", 1.0);
 
     // Convert cm (config) → mm (Geant4 internal)
     fTPCRadius        = cfg.GetDouble("tpc_radius_cm",       10.0) * cm;
@@ -55,6 +61,18 @@ G4VPhysicalVolume* DetectorConstruction::Construct() {
 
 void DetectorConstruction::DefineGasMaterial(const std::string& gasName) {
     auto* nist = G4NistManager::Instance();
+
+    if (gasName == "Ar") {
+        // Argon at configurable pressure (ideal-gas density scaling from STP).
+        // A fresh material name per pressure keeps reruns in one process safe.
+        if (G4Material::GetMaterial("ArGas", false)) return;
+        const double p_atm   = fGasPressure_bar * bar / atmosphere; // bar → atm units
+        const double rho_stp = 1.7837e-3 * g / cm3;                 // Ar at STP
+        new G4Material("ArGas", 18., 39.948 * g / mole,
+                       rho_stp * p_atm,
+                       kStateGas, 293.15 * kelvin, fGasPressure_bar * bar);
+        return;
+    }
 
     if (gasName == "Xe") {
         // Use NIST xenon; falls back to manual definition if unavailable.
@@ -94,7 +112,10 @@ void DetectorConstruction::DefineGasMaterial(const std::string& gasName) {
 }
 
 static G4Material* GetGasMaterial(const std::string& gasName) {
-    if (gasName == "Xe") {
+    if (gasName == "Ar") {
+        G4Material* m = G4Material::GetMaterial("ArGas", false);
+        if (m) return m;
+    } else if (gasName == "Xe") {
         G4Material* m = G4NistManager::Instance()->FindOrBuildMaterial("G4_Xe");
         if (m) return m;
     } else if (gasName == "SF6") {
@@ -185,6 +206,12 @@ G4VPhysicalVolume* DetectorConstruction::ConstructFromGDML() {
 // ---- ConstructSDandField -------------------------------------------------
 
 void DetectorConstruction::ConstructSDandField() {
+    if (fFieldStrength <= 0.0) {
+        G4cout << "[DetectorConstruction] field_strength_V_per_cm <= 0: "
+                  "no electric field applied.\\n";
+        return;
+    }
+
     // Locate the drift logical volume (works for both modes).
     if (!fDriftLogical) {
         fDriftLogical =
@@ -206,8 +233,13 @@ void DetectorConstruction::ConstructSDandField() {
     auto* stepper     = new G4ClassicalRK4(eqOfMotion, nVar);
 
     const G4double minStep = 0.01 * mm;
+#if G4VERSION_NUMBER >= 1140
+    auto* intDriver   = new G4IntegrationDriver<G4ClassicalRK4>(
+                            minStep, stepper, stepper->GetNumberOfVariables());
+#else
     auto* intDriver   = new G4MagInt_Driver(minStep, stepper,
                                              stepper->GetNumberOfVariables());
+#endif
     auto* chordFinder = new G4ChordFinder(intDriver);
 
     auto* fieldMgr    = new G4FieldManager(eField, chordFinder);

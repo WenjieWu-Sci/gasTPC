@@ -1,0 +1,7 @@
+# track_length.mac – alpha track-length scan support macro.
+# Particle/energy/position/direction come from the JSON config
+# (PrimaryGeneratorAction reads them); the macro only triggers the run.
+/run/verbose  0
+/event/verbose 0
+/tracking/verbose 0
+/run/beamOn 100

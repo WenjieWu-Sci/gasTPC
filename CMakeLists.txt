@@ -50,6 +50,14 @@ target_link_libraries(gasTPC
         ${ROOT_LINK_LIBS}
 )
 
+# RHEL-family Qt6 builds tag libstdc++ symbols with a "Qt_6" version node that
+# no library provides; Geant4's Qt-enabled shared libs then fail strict
+# versioned-symbol resolution at link time. The dynamic loader falls back to
+# the unversioned libstdc++ symbol at runtime, so allow it here.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_options(gasTPC PRIVATE -Wl,--allow-shlib-undefined)
+endif()
+
 # ============================================================
 # Copy runtime assets to the build directory
 # ============================================================

@@ -4,10 +4,13 @@
 ///
 /// When compiled with ROOT (HAS_ROOT defined), output is written to a TTree in
 /// a ROOT file.  Without ROOT, a plain CSV summary is written instead.
+/// Both modes can additionally write per-hit steps and per-event aggregates.
 
 #include "TPCHit.hh"
+#include "G4ThreeVector.hh"
 #include "G4UserRunAction.hh"
 
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -26,8 +29,9 @@ public:
     void BeginOfRunAction(const G4Run* run) override;
     void EndOfRunAction  (const G4Run* run) override;
 
-    /// Called by EventAction at the end of every event.
-    void FillEvent(int eventID, const std::vector<TPCHit>& hits);
+    /// Called by EventAction at the end of every event (also zero-hit ones).
+    void FillEvent(int eventID, const std::vector<TPCHit>& hits,
+                   const G4ThreeVector& primPos, const G4ThreeVector& primDir);
 
 private:
     std::string fOutputFile;
@@ -52,4 +56,15 @@ private:
     long long   fTotalHits      = 0;
     int         fNEvents        = 0;
 #endif
+
+    // Per-hit step records (written in both build modes when enabled).
+    // Text mode: "<output>_steps.csv".  Controlled by config key
+    // "record_steps" (default: on in text mode, off with ROOT).
+    bool        fRecordSteps = false;
+    std::string fStepsFile;
+    std::ofstream fSteps;
+
+    // Per-event aggregates: "<output>_events.csv" (both build modes).
+    std::string fEventsFile;
+    std::ofstream fEvents;
 };

@@ -38,8 +38,17 @@ void EventAction::BeginOfEventAction(const G4Event* /*event*/) {
 void EventAction::EndOfEventAction(const G4Event* event) {
     const int evtID = event->GetEventID();
 
-    if (!fHits.empty())
-        fRunAction->FillEvent(evtID, fHits);
+    // Primary vertex/direction for the events-level record.
+    G4ThreeVector pos(0.0, 0.0, 0.0), dir(0.0, 0.0, 1.0);
+    if (const auto* vtx = event->GetPrimaryVertex(0)) {
+        pos = vtx->GetPosition();
+        if (const auto* prim = vtx->GetPrimary())
+            dir = prim->GetMomentumDirection();
+    }
+
+    // Always forward, even with zero hits: the events file needs the full
+    // denominator for acceptance fractions.
+    fRunAction->FillEvent(evtID, fHits, pos, dir);
 }
 
 void EventAction::AddHit(const TPCHit& hit) {

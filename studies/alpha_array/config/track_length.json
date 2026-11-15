@@ -1,0 +1,23 @@
+{
+    "geometry_mode": "builtin",
+    "gas": "Ar",
+    "gas_pressure_bar": 1.0,
+
+    "tpc_radius_cm": 30.0,
+    "tpc_length_cm": 60.0,
+    "anode_thickness_cm": 0.001,
+    "cathode_thickness_cm": 0.001,
+
+    "output_file": "track",
+    "particle": "alpha",
+    "energy_keV": 5486.0,
+    "gun_pos_x_cm": 0.0,
+    "gun_pos_y_cm": 0.0,
+    "gun_pos_z_cm": -29.0,
+    "gun_dir_x": 0.0,
+    "gun_dir_y": 0.0,
+    "gun_dir_z": 1.0,
+
+    "record_steps": true,
+    "field_strength_V_per_cm": 0.0
+}

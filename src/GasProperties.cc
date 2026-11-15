@@ -5,6 +5,22 @@
 
 GasProperties GasPropertiesFactory::GetGas(const std::string& name) {
     // -----------------------------------------------------------------------
+    // Argon (noble gas, W = 26 eV commonly quoted for alpha/electron ionisation)
+    // Fano ~ 0.16 [Do Carmo et al.]; no attachment.
+    // -----------------------------------------------------------------------
+    if (name == "Ar") {
+        return {
+            "Ar",
+            26.0,   // wValue        [eV]
+            0.16,   // fanoFactor
+            0.0,    // attachmentCoeff [1/cm]
+            1.6,    // driftVelocity  [cm/µs]  order-of-magnitude, not used here
+            0.010,  // diffusionT     [cm/√cm]
+            0.010   // diffusionL     [cm/√cm]
+        };
+    }
+
+    // -----------------------------------------------------------------------
     // Xenon (non-attaching noble gas, excellent for TPCs)
     // W = 21.9 eV  [ICRU Report 31]
     // Fano = 0.17  [Alkhazov et al.]
