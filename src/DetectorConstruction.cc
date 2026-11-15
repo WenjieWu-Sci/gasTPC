@@ -12,7 +12,9 @@
 #include "G4Element.hh"
 #include "G4EqMagElectricField.hh"
 #include "G4FieldManager.hh"
+#ifdef HAS_GDML
 #include "G4GDMLParser.hh"
+#endif
 #include "G4LogicalVolume.hh"
 #include "G4LogicalVolumeStore.hh"
 #include "G4Version.hh"
@@ -192,6 +194,7 @@ G4VPhysicalVolume* DetectorConstruction::ConstructBuiltin() {
 // ---- ConstructFromGDML ---------------------------------------------------
 
 G4VPhysicalVolume* DetectorConstruction::ConstructFromGDML() {
+#ifdef HAS_GDML
     G4GDMLParser parser;
     parser.Read(fGDMLFile, /*validate=*/false);
 
@@ -201,6 +204,11 @@ G4VPhysicalVolume* DetectorConstruction::ConstructFromGDML() {
             "[DetectorConstruction] GDML: no world volume in " + fGDMLFile);
 
     return worldPhys;
+#else
+    throw std::runtime_error(
+        "[DetectorConstruction] geometry_mode=\"gdml\" requested, but gasTPC "
+        "was built against a Geant4 without GDML support.");
+#endif
 }
 
 // ---- ConstructSDandField -------------------------------------------------

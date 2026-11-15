@@ -6,13 +6,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ============================================================
-# Geant4 (required)  –  needs ui_all vis_all gdml components
+# Geant4 (required)  –  ui_all vis_all components; gdml optional
 # ============================================================
-find_package(Geant4 REQUIRED ui_all vis_all gdml)
+find_package(Geant4 REQUIRED ui_all vis_all)
+find_package(Geant4 QUIET COMPONENTS gdml)
 include(${Geant4_USE_FILE})
 
 message(STATUS "Geant4 version : ${Geant4_VERSION}")
 message(STATUS "Geant4 includes: ${Geant4_INCLUDE_DIRS}")
+if(Geant4_gdml_FOUND)
+    add_compile_definitions(HAS_GDML)
+else()
+    message(STATUS "Geant4 built without GDML – 'gdml' geometry mode disabled")
+endif()
 
 # ============================================================
 # ROOT (optional)  –  enables TTree/TFile output
