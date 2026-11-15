@@ -109,6 +109,15 @@ def main():
     import matplotlib.pyplot as plt
     from matplotlib.patches import RegularPolygon
 
+    plt.rcParams.update({
+        "font.size": 13,
+        "axes.titlesize": 14,
+        "axes.labelsize": 13,
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12,
+        "legend.fontsize": 12,
+    })
+
     # total spectra: vessel vs cage
     fig, ax = plt.subplots(figsize=(7.5, 4.6))
     bins = np.arange(0, 66, 0.5)
@@ -131,13 +140,17 @@ def main():
     fig.tight_layout(); fig.savefig(out / "conversion_xy.png", dpi=140); plt.close(fig)
 
     # per-channel full-energy count map
-    fig, ax = plt.subplots(figsize=(8, 6.5))
+    fig, ax = plt.subplots(figsize=(9.5, 7.5))
+    vmax = max(1, spec.n_full_energy_channel.max())
     for _, r in layout.iterrows():
         n = int(spec.loc[spec.chip == r.chip, "n_full_energy_channel"].iloc[0])
-        color = plt.cm.viridis(min(n / max(1, spec.n_full_energy_channel.max()), 1.0))
+        frac = n / vmax
+        color = plt.cm.viridis(frac)
         ax.add_patch(RegularPolygon((r.x, r.y), 6, radius=6.0, facecolor=color, edgecolor="k", lw=0.3))
         if n:
-            ax.text(r.x, r.y, str(n), ha="center", va="center", fontsize=5)
+            # contrasting label: white on dark cells, black on light cells
+            ax.text(r.x, r.y, str(n), ha="center", va="center", fontsize=8.5,
+                    color="white" if frac < 0.55 else "black")
     ax.set_aspect("equal"); ax.autoscale_view()
     ax.set_title(f"{gas}: full-energy (55–62 keV) counts per channel")
     ax.set_xlabel("x (mm)"); ax.set_ylabel("y (mm)")
@@ -153,7 +166,7 @@ def main():
         d = cellsum[cellsum.chip == ch].edep_keV
         ax.hist(d, bins=bins, histtype="step", lw=1.3)
         ax.set_yscale("log"); ax.set_xlabel("channel edep (keV)")
-        ax.set_title(f"{ch} ({tag})\nN={len(d)}, full={int(((d>=55)&(d<=62)).sum())}", fontsize=9)
+        ax.set_title(f"{ch} ({tag})\nN={len(d)}, full={int(((d>=55)&(d<=62)).sum())}", fontsize=12)
         ax.grid(alpha=0.3)
     axes[0].set_ylabel("events / 0.5 keV")
     fig.suptitle(f"{gas}: per-channel spectra")
