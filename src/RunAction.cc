@@ -78,7 +78,7 @@ void RunAction::BeginOfRunAction(const G4Run* run) {
                    << fStepsFile << "'\n";
             fRecordSteps = false;
         } else {
-            fSteps << "eventID,trackID,pdg,x_mm,y_mm,z_mm,edep_keV,n_e\n";
+            fSteps << "eventID,trackID,pdg,x_mm,y_mm,z_mm,edep_keV,n_e,creator\n";
             G4cout << "[RunAction] Step records → " << fStepsFile << G4endl;
         }
     }
@@ -150,7 +150,8 @@ void RunAction::FillEvent(int eventID, const std::vector<TPCHit>& hits,
                    << h.position.y() / mm        << ','
                    << h.position.z() / mm        << ','
                    << h.energyDeposit / keV      << ','
-                   << h.nElectrons               << '\n';
+                   << h.nElectrons               << ','
+                   << h.creatorProc              << '\n';
         }
     }
 

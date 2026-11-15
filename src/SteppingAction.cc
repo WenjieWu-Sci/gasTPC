@@ -11,6 +11,7 @@
 #include "G4SystemOfUnits.hh"
 #include "G4Track.hh"
 #include "G4VPhysicalVolume.hh"
+#include "G4VProcess.hh"
 
 #include <algorithm>
 #include <cmath>
@@ -63,6 +64,14 @@ void SteppingAction::UserSteppingAction(const G4Step* step) {
     hit.trackID       = trk->GetTrackID();
     hit.pdgCode       = trk->GetDefinition()->GetPDGEncoding();
     hit.nElectrons    = nElectrons;
+
+    // Creator process (photon physics diagnostics; primary track -> 0)
+    if (const auto* cp = trk->GetCreatorProcess()) {
+        const auto& pn = cp->GetProcessName();
+        if (pn == "phot")       hit.creatorProc = 1;
+        else if (pn == "compt") hit.creatorProc = 2;
+        else if (pn == "Rayl")  hit.creatorProc = 3;
+    }
 
     fEventAction->AddHit(hit);
 }
