@@ -40,21 +40,30 @@ STUDIES = {
 }
 
 
-def one_run(study, p, z_mm, events, outroot, cos_theta=False):
+def one_run(study, p, z_mm, events, outroot, cos_theta=False, base_cfg=None,
+            overrides=None):
     tag = f"{study}_p{p:g}_z{z_mm:g}"
     rundir = outroot / tag
     rundir.mkdir(parents=True, exist_ok=True)
 
-    cfg = json.loads(BASE_CFG.read_text())
+    cfg = json.loads((base_cfg or BASE_CFG).read_text())
     cfg.update(STUDIES[study]["extra"])
+    if overrides:
+        cfg.update(overrides)
     cfg["source_mode"] = STUDIES[study]["mode"]
     if cos_theta:
         cfg["cone_theta_cosine"] = True
+    plane_z = -cfg.get("tpc_length_cm", 60.0) * 10.0 / 2.0
+    top_z = -plane_z
     cfg["gas_pressure_bar"] = p
-    cfg["gun_pos_z_cm"] = (PLANE_Z_MM + z_mm) / 10.0
+    # source sits at most 1 mm below the cathode (top face)
+    gun_z_mm = min(plane_z + z_mm, top_z - 1.0)
+    cfg["gun_pos_z_cm"] = gun_z_mm / 10.0
     if STUDIES[study]["mode"] == "slit":
-        # slit top opening 1 mm below the source disk
-        cfg["slit_center_mm"] = f"0,0,{PLANE_Z_MM + z_mm - 1.0:g}"
+        # slit top opening 1 mm below the source disk, centred on the source
+        gx = cfg.get("gun_pos_x_cm", 0.0) * 10.0
+        gy = cfg.get("gun_pos_y_cm", 0.0) * 10.0
+        cfg["slit_center_mm"] = f"{gx:g},{gy:g},{gun_z_mm - 1.0:g}"
     cfg["random_seed"] = 100000 + int(p * 1000) * 10 + int(z_mm)
     cfg["output_file"] = str(rundir / "run")
     (rundir / "config.json").write_text(json.dumps(cfg, indent=4))
@@ -80,13 +89,28 @@ def main():
                     default=pathlib.Path("/home/wuwenjie/Data/gasTPC-crosscheck"))
     ap.add_argument("--cos-theta", action="store_true",
                     help="sample cos(theta) uniformly (solid-angle) instead of theta")
+    ap.add_argument("--base", type=pathlib.Path,
+                    help="base config JSON (default config/study_base.json)")
+    ap.add_argument("--heights",
+                    help="comma-separated source heights in mm (overrides study default)")
+    ap.add_argument("--set", action="append", default=[],
+                    help="override a config key, e.g. --set cone_phi_min_deg=79.77 (repeatable)")
     args = ap.parse_args()
 
     spec = STUDIES[args.study]
+    overrides = {}
+    for item in args.set:
+        k, v = item.split("=", 1)
+        overrides[k] = json.loads(v)
+    heights = ([float(h) for h in args.heights.split(",")] if args.heights
+               else spec["heights"])
     name = f"study-{args.study}" + ("-costheta" if args.cos_theta else "")
+    if args.set:
+        name += "-custom"
     outroot = args.out / name
-    jobs = [(args.study, p, z, args.events, outroot, args.cos_theta)
-            for p in spec["pressures"] for z in spec["heights"]]
+    jobs = [(args.study, p, z, args.events, outroot, args.cos_theta, args.base,
+             overrides)
+            for p in spec["pressures"] for z in heights]
 
     print(f"study {args.study}: {len(jobs)} runs -> {outroot}")
     failed = []

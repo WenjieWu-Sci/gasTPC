@@ -64,14 +64,18 @@ G4VPhysicalVolume* DetectorConstruction::Construct() {
 void DetectorConstruction::DefineGasMaterial(const std::string& gasName) {
     auto* nist = G4NistManager::Instance();
 
-    if (gasName == "Ar") {
-        // Argon at configurable pressure (ideal-gas density scaling from STP).
-        // A fresh material name per pressure keeps reruns in one process safe.
-        if (G4Material::GetMaterial("ArGas", false)) return;
-        const double p_atm   = fGasPressure_bar * bar / atmosphere; // bar → atm units
-        const double rho_stp = 1.7837e-3 * g / cm3;                 // Ar at STP
-        new G4Material("ArGas", 18., 39.948 * g / mole,
-                       rho_stp * p_atm,
+    if (gasName == "Ar" || gasName == "Xe") {
+        // Noble gas at configurable pressure (ideal-gas density scaling from
+        // STP at 293.15 K).  A dedicated material per gas keeps NIST usage
+        // untouched when pressure is not configured.
+        const bool isAr = (gasName == "Ar");
+        const std::string name = isAr ? "ArGas" : "XeGas";
+        if (G4Material::GetMaterial(name, false)) return;
+        const double z    = isAr ? 18. : 54.;
+        const double a    = isAr ? 39.948 : 131.293;
+        const double rho  = isAr ? 1.7837e-3 : 5.8582e-3;  // g/cm3 at STP
+        const double p_atm = fGasPressure_bar * bar / atmosphere;
+        new G4Material(name, z, a * g / mole, rho * p_atm * (g / cm3),
                        kStateGas, 293.15 * kelvin, fGasPressure_bar * bar);
         return;
     }
@@ -118,7 +122,9 @@ static G4Material* GetGasMaterial(const std::string& gasName) {
         G4Material* m = G4Material::GetMaterial("ArGas", false);
         if (m) return m;
     } else if (gasName == "Xe") {
-        G4Material* m = G4NistManager::Instance()->FindOrBuildMaterial("G4_Xe");
+        G4Material* m = G4Material::GetMaterial("XeGas", false);
+        if (m) return m;
+        m = G4NistManager::Instance()->FindOrBuildMaterial("G4_Xe");
         if (m) return m;
     } else if (gasName == "SF6") {
         G4Material* m = G4Material::GetMaterial("SF6Gas", false);
@@ -139,6 +145,11 @@ G4VPhysicalVolume* DetectorConstruction::ConstructBuiltin() {
     auto* air    = nist->FindOrBuildMaterial("G4_AIR");
     auto* copper = nist->FindOrBuildMaterial("G4_Cu");
     auto* gas    = GetGasMaterial(fGasName);
+
+    G4cout << "[DetectorConstruction] gas=" << fGasName
+           << " material=" << gas->GetName()
+           << " density=" << gas->GetDensity() / (g / cm3) << " g/cm3"
+           << " Z=" << gas->GetZ() << G4endl;
 
     // ---- World -----------------------------------------------------------
     const G4double worldHalf = 2.0 * m;

@@ -38,7 +38,17 @@ ROWS = [
 SENSITIVE = set(range(11, 19)) | set(range(21, 30)) | set(range(32, 40))
 
 
-def build_layout():
+def build_layout(path=None):
+    """Cell table with columns chip, x, y, role.
+
+    With a path: read the real 98-chip layout CSV
+    (channel,position,x_mm,y_mm,role).  Otherwise: the report's 49-cell
+    strip (for cross-check reproduction).
+    """
+    if path:
+        df = pd.read_csv(path, comment="#")
+        df = df.rename(columns={"channel": "chip", "x_mm": "x", "y_mm": "y"})
+        return df[["chip", "x", "y", "role"]]
     cells = []  # (chipID, x, y, role)
     for j, y, x0, n, ch0 in ROWS:
         for i in range(n):
@@ -48,7 +58,7 @@ def build_layout():
     return pd.DataFrame(cells, columns=["chip", "x", "y", "role"])
 
 
-def assign_cells(df, layout):
+def assign_cells(df, layout, accept_mm=CELL_ACCEPT_MM):
     """Return per-(eventID, chip) summed edep_keV (nearest-centre, XY)."""
     pts = df[["x_mm", "y_mm"]].to_numpy()
     cx = layout["x"].to_numpy()
@@ -61,7 +71,7 @@ def assign_cells(df, layout):
               + (p[:, None, 1] - cy[None, :]) ** 2)
         i = d2.argmin(axis=1)
         chip_idx[s:s + 200_000] = np.where(d2[np.arange(len(p)), i]
-                                           <= CELL_ACCEPT_MM ** 2, i, -1)
+                                           <= accept_mm ** 2, i, -1)
     out = df.assign(chip=layout["chip"].to_numpy()[np.clip(chip_idx, 0, None)])
     out = out[chip_idx >= 0]
     return out.groupby(["eventID", "chip"])["edep_keV"].sum()
@@ -92,17 +102,31 @@ GAS_TOP_MM = 300.0
 
 
 # ------------------------------------------------------------- analysis ------
-def analyse_run(rundir, layout, thr, use_zcut):
+def analyse_run(rundir, layout, thr, use_zcut, accept_mm=CELL_ACCEPT_MM):
     rundir = pathlib.Path(rundir)
+    # geometry from the run's own config (fallback: original 60 cm cylinder)
+    plane_z, gas_r, gas_top = PLANE_Z_MM, GAS_R_MM, GAS_TOP_MM
+    cfgfile = rundir / "config.json"
+    if cfgfile.exists():
+        import json
+        cfg = json.loads(cfgfile.read_text())
+        length_mm = cfg.get("tpc_length_cm", 60.0) * 10.0
+        plane_z = -length_mm / 2.0
+        gas_top = plane_z + length_mm
+        gas_r = cfg.get("tpc_radius_cm", 35.0) * 10.0
+
     steps = pd.read_csv(rundir / "run_steps.csv")
     events = pd.read_csv(rundir / "run_events.csv")
 
-    # out-of-gas exclusions (side/top boundary reached)
-    excl = (events["rmax_mm"] >= GAS_R_MM - 2) | (events["zmax_mm"] >= GAS_TOP_MM - 2)
+    # out-of-gas exclusions (side/top boundary reached; a source placed at the
+    # top face does not count as exiting)
+    excl = ((events["rmax_mm"] >= gas_r - 2)
+            | ((events["zmax_mm"] >= gas_top - 2)
+               & (events["z0_mm"] < gas_top - 2)))
     events = events[~excl]
     steps = steps[steps["eventID"].isin(events["eventID"])]
 
-    cellsum = assign_cells(steps, layout)  # (eventID, chip) -> keV
+    cellsum = assign_cells(steps, layout, accept_mm)  # (eventID, chip) -> keV
     ev = events.set_index("eventID")
     n = len(ev)
 
@@ -116,7 +140,7 @@ def analyse_run(rundir, layout, thr, use_zcut):
             if kev > sens_max.get(eid, 0.0):
                 sens_max[eid] = kev
     sat = (sens_max > thr).to_numpy()
-    trunc = (ev["zmin_mm"] <= PLANE_Z_MM + 2.0).to_numpy() if use_zcut else np.zeros(n, bool)
+    trunc = (ev["zmin_mm"] <= plane_z + 2.0).to_numpy() if use_zcut else np.zeros(n, bool)
 
     res = dict(n=n, excluded=int(excl.sum()),
                veto_only=int((veto & ~sat & ~trunc).sum()),
@@ -128,12 +152,13 @@ def analyse_run(rundir, layout, thr, use_zcut):
 
 
 def cmd_study(args):
-    layout = build_layout()
+    layout = build_layout(args.layout)
     rows = []
     for d in sorted(pathlib.Path(args.dir).glob(f"{args.study}_p*_z*")):
         p = float(d.name.split("_p")[1].split("_z")[0])
         z = float(d.name.split("_z")[1])
-        r = analyse_run(d, layout, args.thr, args.zcut)
+        r = analyse_run(d, layout, args.thr, args.zcut,
+                        accept_mm=7.0 if args.layout else CELL_ACCEPT_MM)
         rows.append(dict(study=args.study, p=p, z=z, **r))
     df = pd.DataFrame(rows).sort_values(["z", "p"])
     for c in ["veto_only", "sat_only", "plane_only", "multiple", "accepted"]:
@@ -206,6 +231,7 @@ def main():
     s.add_argument("--study", required=True, choices=["A", "B", "C"])
     s.add_argument("--zcut", action="store_true")
     s.add_argument("--thr", type=float, default=1160.0)
+    s.add_argument("--layout", help="external chip layout CSV (98-chip real board)")
     t = sub.add_parser("track-length")
     t.add_argument("dir")
     args = ap.parse_args()
