@@ -3,6 +3,8 @@
 
 #include "PhysicsList.hh"
 
+#include "ConfigManager.hh"
+
 #include "G4DecayPhysics.hh"
 #include "G4EmStandardPhysics_option4.hh"
 #include "G4SystemOfUnits.hh"
@@ -16,8 +18,11 @@ PhysicsList::PhysicsList() : G4VModularPhysicsList() {
 }
 
 void PhysicsList::SetCuts() {
-    SetCutValue(0.1 * mm, "gamma");
-    SetCutValue(0.1 * mm, "e-");
-    SetCutValue(0.1 * mm, "e+");
-    SetCutValue(1.0 * mm, "proton");
+    // Production cuts are configurable for low-pressure-gas CPU control.
+    // Defaults reproduce the stock values.
+    auto& cfg = ConfigManager::Instance();
+    SetCutValue(cfg.GetDouble("prod_cut_gamma_mm",    0.1) * mm, "gamma");
+    SetCutValue(cfg.GetDouble("prod_cut_electron_mm", 0.1) * mm, "e-");
+    SetCutValue(cfg.GetDouble("prod_cut_positron_mm", 0.1) * mm, "e+");
+    SetCutValue(cfg.GetDouble("prod_cut_proton_mm",   1.0) * mm, "proton");
 }

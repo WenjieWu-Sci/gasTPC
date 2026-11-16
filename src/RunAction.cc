@@ -8,6 +8,8 @@
 #include "G4Run.hh"
 #include "G4SystemOfUnits.hh"
 
+#include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 
@@ -19,7 +21,15 @@
 // ---- constructor / destructor --------------------------------------------
 
 RunAction::RunAction() {
-    fOutputFile = ConfigManager::Instance().GetString("output_file", "output");
+    auto& cfg = ConfigManager::Instance();
+    fOutputFile = cfg.GetString("output_file", "output");
+#ifdef HAS_ROOT
+    fRecordSteps = cfg.GetBool("record_steps", false);
+#else
+    fRecordSteps = cfg.GetBool("record_steps", true);
+#endif
+    fStepsFile  = fOutputFile + "_steps.csv";
+    fEventsFile = fOutputFile + "_events.csv";
 }
 
 RunAction::~RunAction() = default;
@@ -60,12 +70,37 @@ void RunAction::BeginOfRunAction(const G4Run* run) {
     fNEvents        = 0;
     G4cout << "[RunAction] Text summary → " << fTextFile << G4endl;
 #endif
+
+    if (fRecordSteps) {
+        fSteps.open(fStepsFile);
+        if (!fSteps.is_open()) {
+            G4cerr << "[RunAction] ERROR: cannot open steps file '"
+                   << fStepsFile << "'\n";
+            fRecordSteps = false;
+        } else {
+            fSteps << "eventID,trackID,pdg,x_mm,y_mm,z_mm,edep_keV,n_e,creator\n";
+            G4cout << "[RunAction] Step records → " << fStepsFile << G4endl;
+        }
+    }
+
+    fEvents.open(fEventsFile);
+    if (!fEvents.is_open()) {
+        G4cerr << "[RunAction] ERROR: cannot open events file '"
+               << fEventsFile << "'\n";
+    } else {
+        fEvents << "eventID,n_hits,edep_total_keV,zmin_mm,zmax_mm,rmax_mm,"
+                   "x0_mm,y0_mm,z0_mm,theta_deg,phi_deg\n";
+        G4cout << "[RunAction] Event records → " << fEventsFile << G4endl;
+    }
 }
 
 // ---- EndOfRunAction ------------------------------------------------------
 
 void RunAction::EndOfRunAction(const G4Run* run) {
     const int nev = run->GetNumberOfEvent();
+
+    if (fSteps.is_open())  fSteps.close();
+    if (fEvents.is_open()) fEvents.close();
 
 #ifdef HAS_ROOT
     if (fRootFile && fTree) {
@@ -103,7 +138,52 @@ void RunAction::EndOfRunAction(const G4Run* run) {
 
 // ---- FillEvent -----------------------------------------------------------
 
-void RunAction::FillEvent(int eventID, const std::vector<TPCHit>& hits) {
+void RunAction::FillEvent(int eventID, const std::vector<TPCHit>& hits,
+                          const G4ThreeVector& primPos,
+                          const G4ThreeVector& primDir) {
+    if (fRecordSteps) {
+        for (const auto& h : hits) {
+            fSteps << eventID                    << ','
+                   << h.trackID                  << ','
+                   << h.pdgCode                  << ','
+                   << h.position.x() / mm        << ','
+                   << h.position.y() / mm        << ','
+                   << h.position.z() / mm        << ','
+                   << h.energyDeposit / keV      << ','
+                   << h.nElectrons               << ','
+                   << h.creatorProc              << '\n';
+        }
+    }
+
+    if (fEvents.is_open()) {
+        double edep = 0.0, zmin = 0.0, zmax = 0.0, rmax = 0.0;
+        bool first = true;
+        for (const auto& h : hits) {
+            edep += h.energyDeposit / keV;
+            const double z = h.position.z() / mm;
+            const double r = std::hypot(h.position.x() / mm,
+                                        h.position.y() / mm);
+            if (first) { zmin = zmax = z; rmax = r; first = false; }
+            else {
+                zmin = std::min(zmin, z); zmax = std::max(zmax, z);
+                rmax = std::max(rmax, r);
+            }
+        }
+        const double theta = primDir.theta() / deg;
+        const double phi   = primDir.phi()   / deg;
+        fEvents << eventID                 << ','
+                << hits.size()             << ','
+                << edep                    << ','
+                << (first ? -999.0 : zmin) << ','
+                << (first ? -999.0 : zmax) << ','
+                << (first ? -999.0 : rmax) << ','
+                << primPos.x() / mm        << ','
+                << primPos.y() / mm        << ','
+                << primPos.z() / mm        << ','
+                << theta                   << ','
+                << phi                     << '\n';
+    }
+
 #ifdef HAS_ROOT
     if (!fTree) return;
 

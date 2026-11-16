@@ -24,6 +24,9 @@ public:
     int    trackID       = 0;
     int    pdgCode       = 0;
     int    nElectrons    = 0;   ///< ionisation electrons after attachment
+    /// Creator process of this track: 0 primary/other, 1 photoelectric,
+    /// 2 Compton, 3 Rayleigh.  Lets gamma studies tag the first interaction.
+    int    creatorProc   = 0;
 };
 
 /// Thread-local allocator instance (defined in EventAction.cc).

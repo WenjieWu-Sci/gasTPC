@@ -6,13 +6,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ============================================================
-# Geant4 (required)  –  needs ui_all vis_all gdml components
+# Geant4 (required)  –  ui_all vis_all components; gdml optional
 # ============================================================
-find_package(Geant4 REQUIRED ui_all vis_all gdml)
+find_package(Geant4 REQUIRED ui_all vis_all)
+find_package(Geant4 QUIET COMPONENTS gdml)
 include(${Geant4_USE_FILE})
 
 message(STATUS "Geant4 version : ${Geant4_VERSION}")
 message(STATUS "Geant4 includes: ${Geant4_INCLUDE_DIRS}")
+if(Geant4_gdml_FOUND)
+    add_compile_definitions(HAS_GDML)
+else()
+    message(STATUS "Geant4 built without GDML – 'gdml' geometry mode disabled")
+endif()
 
 # ============================================================
 # ROOT (optional)  –  enables TTree/TFile output
@@ -49,6 +55,14 @@ target_link_libraries(gasTPC
         ${Geant4_LIBRARIES}
         ${ROOT_LINK_LIBS}
 )
+
+# RHEL-family Qt6 builds tag libstdc++ symbols with a "Qt_6" version node that
+# no library provides; Geant4's Qt-enabled shared libs then fail strict
+# versioned-symbol resolution at link time. The dynamic loader falls back to
+# the unversioned libstdc++ symbol at runtime, so allow it here.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_options(gasTPC PRIVATE -Wl,--allow-shlib-undefined)
+endif()
 
 # ============================================================
 # Copy runtime assets to the build directory

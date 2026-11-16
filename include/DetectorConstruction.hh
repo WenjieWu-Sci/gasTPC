@@ -40,6 +40,7 @@ private:
     std::string fMode;              ///< "builtin" or "gdml"
     std::string fGDMLFile;
     std::string fGasName;
+    double      fGasPressure_bar = 1.0;  ///< gas pressure (Ar density scaling)
 
     double fTPCRadius;          ///< mm (Geant4 units)
     double fTPCLength;          ///< mm (Geant4 units) – full length

@@ -53,9 +53,9 @@ int main(int argc, char** argv) {
 
     // ---- Load configuration ---------------------------------------------
     auto& cfg = ConfigManager::Instance();
-    cfg.LoadFile(configFile);
     cfg.LoadFile("config/gas.json");
     cfg.LoadFile("config/field.json");
+    cfg.LoadFile(configFile);   // explicit --config overrides bundled defaults
 
     // ---- Create run manager ---------------------------------------------
 #if G4VERSION_NUMBER >= 1070
